@@ -1,0 +1,30 @@
+#!/bin/sh
+
+while [ $# -gt 0 ]; do
+	case "$1" in
+	-s)
+		export STEREO_SWAP=1;;
+	
+	-g)
+		export STEREO_GREY=1;;
+
+	-m)
+		if [ -z "$2" ]; then
+			echo "-m must be followed by the stereo presentation method" >&2
+			exit 1
+		fi
+		export STEREO_METHOD="$2"
+		shift;;
+	
+	-*)
+		echo "unrecognized option: $1" >&2
+		exit 1;;
+	
+	*)
+		break;;
+	esac
+
+	shift
+done
+
+LD_PRELOAD=libstereowrap.so $*

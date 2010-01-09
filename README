@@ -1,0 +1,40 @@
+stereowrap 0.1
+by John Tsiombikas <nuclear@member.fsf.org>
+
+About
+-----
+Stereowrap is an emulation layer implementing stereoscopic OpenGL visuals
+ontop of non stereo capable OpenGL implementations. To do that it overrides,
+using LD_PRELOAD, the GLX visual selection functions (glXChooseVisual and
+glXChooseFBConfig), glDrawBuffer, and glXSwapBuffers to capture and composite in
+a number of ways the two stereo images rendered by the application.
+
+Currently stereowrap supports presenting the stereo images side by side
+(cross-eyed stereo), or compositing them using various color anaglyph methods
+such as red-blue, red-cyan, and color-code (aka amber-blue).
+
+License
+-------
+Stereowrap is free software, distributed under the terms of the GNU General
+Public License version 3, or any later version published by the Free Software
+Foundation. See COPYING file for details.
+
+Installation and Usage
+----------------------
+Just type "make" to compile stereowrap, and "make install" to install it. In
+order to run a stereoscopic OpenGL program just type stereowrap, followed by the
+name of the program. The stereo presentation method can be chosen using the -m
+option (see stereowrap -h for help regarding the various options).
+
+Example:
+$ stereowrap -m redcyan glxgears -stereo
+
+Note: command-line options to stereowrap must preceed the name of the program
+you wish to wrap, any argument after that is passed to the program itself.
+
+Patent Issues
+-------------
+The ColorCode3D anaglyph method is patented (US Patent #6687003). I live in the
+EU so I don't give a shit, but if you care you may compile stereowrap with
+colorcode disabled. Just modify the Makefile and add -DNOCOLORCODE at the end of
+the CFLAGS line to do that.
