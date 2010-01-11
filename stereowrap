@@ -8,6 +8,9 @@ while [ $# -gt 0 ]; do
 	-g)
 		export STEREO_GREY=1;;
 
+	-f)
+		export STEREO_NOSDR=1;;
+
 	-m)
 		if [ -z "$2" ]; then
 			echo "-m must be followed by the stereo presentation method" >&2

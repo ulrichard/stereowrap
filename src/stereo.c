@@ -32,12 +32,13 @@ enum {
 	CROSS,
 	REDBLUE,
 	REDCYAN,
+	GREENMAG,
 	COLORCODE
 };
 
 #define LEFT_TEX	rtex[swap_eyes ? 1 : 0]
 #define RIGHT_TEX	rtex[swap_eyes ? 0 : 1]
-#define USE_SDR		(glCreateProgramObjectARB != 0)
+#define USE_SDR		(glCreateProgramObjectARB != 0 && use_shaders)
 
 static int init(void);
 static int init_textures(void);
@@ -52,7 +53,9 @@ static unsigned int create_pixel_shader(const char *src);
 static void show_cross(void);
 static void show_redblue(void);
 static void show_redcyan(void);
+static void show_greenmag(void);
 static void show_colorcode(void);
+static void sdr_combine(const char *sdr);
 
 static void (*draw_buffer)(GLenum);
 static void (*swap_buffers)(Display*, GLXDrawable);
@@ -65,6 +68,7 @@ static int cur_buf = -1;
 static int swap_eyes;
 static int stereo_method;
 static int grey;
+static int use_shaders = 1;		/* if available */
 
 #ifdef GL_ARB_shader_objects
 static PFNGLCREATEPROGRAMOBJECTARBPROC glCreateProgramObjectARB;
@@ -95,6 +99,7 @@ static struct {
 	{CROSS, "cross", 0, show_cross},
 	{REDBLUE, "redblue", 0, show_redblue},
 	{REDCYAN, "redcyan", 0, show_redcyan},
+	{GREENMAG, "greenmagenta", 0, show_greenmag},
 #ifndef NOCOLORCODE
 	{COLORCODE, "colorcode", 1, show_colorcode},
 #endif
@@ -127,6 +132,10 @@ static int init(void)
 
 	if(getenv("STEREO_GREY")) {
 		grey = 1;
+	}
+
+	if(getenv("STEREO_NOSDR")) {
+		use_shaders = 0;
 	}
 
 	if((env = getenv("STEREO_METHOD"))) {
@@ -325,6 +334,49 @@ static void show_stereo_pair(void)
 	glPopAttrib();
 }
 
+static const char *redblue_shader = 
+	"uniform sampler2D left_tex, right_tex;\n"
+	"void main()\n"
+	"{\n"
+	"    vec3 left = texture2D(left_tex, gl_TexCoord[0].st).rgb;\n"
+	"    vec3 right = texture2D(right_tex, gl_TexCoord[0].st).rgb;\n"
+	"    float red = (left.r + left.g + left.b) / 3.0;\n"
+	"    float blue = (right.r + right.g + right.b) / 3.0;\n"
+	"    gl_FragColor = vec4(red, 0.0, blue, 1.0);\n"
+	"}\n";
+
+static const char *redcyan_shader = 
+	"uniform sampler2D left_tex, right_tex;\n"
+	"void main()\n"
+	"{\n"
+	"    vec3 left = texture2D(left_tex, gl_TexCoord[0].st).rgb;\n"
+	"    vec3 right = texture2D(right_tex, gl_TexCoord[0].st).rgb;\n"
+	"    gl_FragColor = vec4(left.r, right.g, right.b, 1.0);\n"
+	"    //gl_FragColor = vec4((left.r + left.g + left.b) / 3.0, right.g, right.b, 1.0);\n"
+	"}\n";
+
+static const char *greenmag_shader =
+	"uniform sampler2D left_tex, right_tex;\n"
+	"void main()\n"
+	"{\n"
+	"    vec3 left = texture2D(left_tex, gl_TexCoord[0].st).rgb;\n"
+	"    vec3 right = texture2D(right_tex, gl_TexCoord[0].st).rgb;\n"
+	"    gl_FragColor = vec4(right.r, left.g, right.b, 1.0);\n"
+	"    //gl_FragColor = vec4(right.r, (left.r + left.g + left.b) / 3.0, right.b, 1.0);\n"
+	"}\n";
+
+static const char *colorcode_shader =
+	"uniform sampler2D left_tex, right_tex;\n"
+	"void main()\n"
+	"{\n"
+	"    vec3 left = texture2D(left_tex, gl_TexCoord[0].st).rgb;\n"
+	"    vec3 right = texture2D(right_tex, gl_TexCoord[0].st).rgb;\n"
+	"    vec3 col, coeff = vec3(0.15, 0.15, 0.7);\n"
+	"    col.r = left.r; col.g = left.g;\n"
+	"    col.b = dot(right, coeff);\n"
+	"    gl_FragColor = vec4(col, 1.0);\n"
+	"}\n";
+
 static void show_cross(void)
 {
 	glBindTexture(GL_TEXTURE_2D, LEFT_TEX);
@@ -335,10 +387,34 @@ static void show_cross(void)
 
 static void show_redblue(void)
 {
+	if(USE_SDR) {
+		sdr_combine(redblue_shader);
+		return;
+	}
+
+	glEnable(GL_TEXTURE_2D);
+
+	glBindTexture(GL_TEXTURE_2D, LEFT_TEX);
+	glColorMask(1, 0, 0, 1);
+	quad(-1, -1, 1, 1);
+
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_ONE, GL_ONE);
+
+	glBindTexture(GL_TEXTURE_2D, RIGHT_TEX);
+	glColorMask(0, 0, 1, 1);
+	quad(-1, -1, 1, 1);
+
+	glColorMask(1, 1, 1, 1);
 }
 
 static void show_redcyan(void)
 {
+	if(USE_SDR) {
+		sdr_combine(redcyan_shader);
+		return;
+	}
+
 	glEnable(GL_TEXTURE_2D);
 
 	glBindTexture(GL_TEXTURE_2D, LEFT_TEX);
@@ -355,22 +431,39 @@ static void show_redcyan(void)
 	glColorMask(1, 1, 1, 1);
 }
 
+static void show_greenmag(void)
+{
+	if(USE_SDR) {
+		sdr_combine(greenmag_shader);
+		return;
+	}
+
+	glEnable(GL_TEXTURE_2D);
+
+	glBindTexture(GL_TEXTURE_2D, LEFT_TEX);
+	glColorMask(0, 1, 0, 1);
+	quad(-1, -1, 1, 1);
+
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_ONE, GL_ONE);
+
+	glBindTexture(GL_TEXTURE_2D, RIGHT_TEX);
+	glColorMask(1, 0, 1, 1);
+	quad(-1, -1, 1, 1);
+
+	glColorMask(1, 1, 1, 1);
+}
+
 static void show_colorcode(void)
+{
+	sdr_combine(colorcode_shader);
+}
+
+static void sdr_combine(const char *sdrsrc)
 {
 #ifdef GL_ARB_shader_objects
 	static int loc_left, loc_right;
 	static unsigned int sdr;
-	static const char *sdrsrc =
-		"uniform sampler2D left_tex, right_tex;\n"
-		"void main()\n"
-		"{\n"
-		"    vec3 left = texture2D(left_tex, gl_TexCoord[0].st).rgb;\n"
-		"    vec3 right = texture2D(right_tex, gl_TexCoord[0].st).rgb;\n"
-		"    vec3 col, coeff = vec3(0.15, 0.15, 0.7);\n"
-		"    col.r = left.r; col.g = left.g;\n"
-		"    col.b = dot(right, coeff);\n"
-		"    gl_FragColor = vec4(col, 1.0);\n"
-		"}\n";
 
 	if(!sdr) {
 		if((sdr = create_pixel_shader(sdrsrc))) {
