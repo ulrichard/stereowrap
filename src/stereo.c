@@ -24,10 +24,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <GL/gl.h>
 #include <GL/glx.h>
 
-#ifndef GLX_VERSION_1_3
-typedef void GLXFBConfig;
-#endif
-
 enum {
 	CROSS,
 	REDBLUE,
@@ -84,9 +80,7 @@ static PFNGLGETINFOLOGARBPROC glGetInfoLogARB;
 static PFNGLGETUNIFORMLOCATIONARBPROC glGetUniformLocationARB;
 static PFNGLUNIFORM1IARBPROC glUniform1iARB;
 
-#ifndef GL_VERSION_1_3
 static PFNGLACTIVETEXTUREARBPROC glActiveTextureARB;
-#endif
 
 #endif	/* GL_ARB_shader_objects */
 
@@ -214,9 +208,7 @@ static int init_sdr(void)
 	glGetUniformLocationARB = get_proc(PFNGLGETUNIFORMLOCATIONARBPROC, "glGetUniformLocationARB");
 	glUniform1iARB = get_proc(PFNGLUNIFORM1IARBPROC, "glUniform1iARB");
 
-#ifndef GL_VERSION_1_3
 	glActiveTextureARB = get_proc(PFNGLACTIVETEXTUREARBPROC, "glActiveTextureARB");
-#endif
 
 	if(!glCreateProgramObjectARB) {
 		return -1;
@@ -281,9 +273,33 @@ XVisualInfo *glXChooseVisual(Display *dpy, int scr, int *attr)
 	return choose_visual(dpy, scr, attr);
 }
 
+/*static const char *attr_name[] = {
+	"None",
+	"GLX_USE_GL",
+	"GLX_BUFFER_SIZE",
+	"GLX_LEVEL",
+	"GLX_RGBA",
+	"GLX_DOUBLEBUFFER",
+	"GLX_STEREO",
+	"GLX_AUX_BUFFERS",
+	"GLX_RED_SIZE",
+	"GLX_GREEN_SIZE",
+	"GLX_BLUE_SIZE",
+	"GLX_ALPHA_SIZE",
+	"GLX_DEPTH_SIZE",
+	"GLX_STENCIL_SIZE",
+	"GLX_ACCUM_RED_SIZE",
+	"GLX_ACCUM_GREEN_SIZE",
+	"GLX_ACCUM_BLUE_SIZE",
+	"GLX_ACCUM_ALPHA_SIZE"
+};*/
+
 GLXFBConfig *glXChooseFBConfig(Display *dpy, int scr, const int *attr, int *nitems)
 {
-	int a, *dest, *src;
+	int a, *dest;
+	int *src;
+	int found_use_gl = 0;	/* hack */
+	GLXFBConfig *cfg;
 
 	if(init() == -1 || !choose_fbconfig) {
 		return 0;
@@ -292,12 +308,23 @@ GLXFBConfig *glXChooseFBConfig(Display *dpy, int scr, const int *attr, int *nite
 	dest = src = (int*)attr;
 	do {
 		a = *src++;
-		if(a != GLX_STEREO) {
+
+		if(a < GLX_AUX_BUFFERS) {
+			if(a != GLX_STEREO && !(a == GLX_USE_GL && found_use_gl)) {
+				*dest++ = a;
+			}
+
+			if(a == GLX_USE_GL) {
+				found_use_gl = 1;
+			}
+		} else {
 			*dest++ = a;
+			*dest++ = *src++;
 		}
 	} while(a != None);
 
-	return choose_fbconfig(dpy, scr, attr, nitems);
+	cfg = choose_fbconfig(dpy, scr, attr, nitems);
+	return cfg;
 }
 
 
@@ -339,7 +366,7 @@ static void show_stereo_pair(void)
 	glPopAttrib();
 }
 
-static const char *redblue_shader = 
+static const char *redblue_shader =
 	"uniform sampler2D left_tex, right_tex;\n"
 	"void main()\n"
 	"{\n"
@@ -350,7 +377,7 @@ static const char *redblue_shader =
 	"    gl_FragColor = vec4(red, 0.0, blue, 1.0);\n"
 	"}\n";
 
-static const char *redcyan_shader = 
+static const char *redcyan_shader =
 	"uniform sampler2D left_tex, right_tex;\n"
 	"void main()\n"
 	"{\n"
@@ -425,7 +452,7 @@ static void show_redcyan(void)
 	glBindTexture(GL_TEXTURE_2D, LEFT_TEX);
 	glColorMask(1, 0, 0, 1);
 	draw_quad(-1, -1, 1, 1);
-	
+
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_ONE, GL_ONE);
 
