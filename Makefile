@@ -12,6 +12,10 @@ CC = gcc
 INSTALL = install
 CFLAGS = -Wall -fPIC -g -D_GNU_SOURCE
 
+ifeq ($(shell uname -s), SunOS)
+	INSTALL = ginstall
+endif
+
 $(lib_so): $(obj)
 	$(CC) -o $@ -shared -Wl,-soname,$(soname) $(obj) $(LDFLAGS)
 

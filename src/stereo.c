@@ -48,7 +48,7 @@ void glXSwapBuffers(Display *dpy, GLXDrawable drawable);
 XVisualInfo *glXChooseVisual(Display *dpy, int scr, int *attr);
 GLXFBConfig *glXChooseFBConfig(Display *dpy, int scr, const int *attr, int *nitems);
 static void show_stereo_pair(void);
-static void quad(float x1, float y1, float x2, float y2);
+static void draw_quad(float x1, float y1, float x2, float y2);
 static unsigned int create_pixel_shader(const char *src);
 static void show_cross(void);
 static void show_redblue(void);
@@ -123,7 +123,7 @@ static int init(void)
 		fprintf(stderr, "failed to load GL/GLX functions\n");
 		return -1;
 	}
-	
+
 	init_sdr();
 
 	if(getenv("STEREO_SWAP")) {
@@ -186,8 +186,13 @@ static int init_textures(void)
 	return 0;
 }
 
+#ifdef GLX_VERSION_1_4
+#define get_proc(type, name) \
+	(type)glXGetProcAddress((unsigned char*)name)
+#else
 #define get_proc(type, name) \
 	(type)glXGetProcAddressARB((unsigned char*)name)
+#endif
 
 static int init_sdr(void)
 {
@@ -284,7 +289,7 @@ GLXFBConfig *glXChooseFBConfig(Display *dpy, int scr, const int *attr, int *nite
 		return 0;
 	}
 
-	dest = src = attr;
+	dest = src = (int*)attr;
 	do {
 		a = *src++;
 		if(a != GLX_STEREO) {
@@ -380,9 +385,9 @@ static const char *colorcode_shader =
 static void show_cross(void)
 {
 	glBindTexture(GL_TEXTURE_2D, LEFT_TEX);
-	quad(-1, -1, 0, 1);
+	draw_quad(-1, -1, 0, 1);
 	glBindTexture(GL_TEXTURE_2D, RIGHT_TEX);
-	quad(0, -1, 1, 1);
+	draw_quad(0, -1, 1, 1);
 }
 
 static void show_redblue(void)
@@ -396,14 +401,14 @@ static void show_redblue(void)
 
 	glBindTexture(GL_TEXTURE_2D, LEFT_TEX);
 	glColorMask(1, 0, 0, 1);
-	quad(-1, -1, 1, 1);
+	draw_quad(-1, -1, 1, 1);
 
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_ONE, GL_ONE);
 
 	glBindTexture(GL_TEXTURE_2D, RIGHT_TEX);
 	glColorMask(0, 0, 1, 1);
-	quad(-1, -1, 1, 1);
+	draw_quad(-1, -1, 1, 1);
 
 	glColorMask(1, 1, 1, 1);
 }
@@ -419,14 +424,14 @@ static void show_redcyan(void)
 
 	glBindTexture(GL_TEXTURE_2D, LEFT_TEX);
 	glColorMask(1, 0, 0, 1);
-	quad(-1, -1, 1, 1);
+	draw_quad(-1, -1, 1, 1);
 	
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_ONE, GL_ONE);
 
 	glBindTexture(GL_TEXTURE_2D, RIGHT_TEX);
 	glColorMask(0, 1, 1, 1);
-	quad(-1, -1, 1, 1);
+	draw_quad(-1, -1, 1, 1);
 
 	glColorMask(1, 1, 1, 1);
 }
@@ -442,14 +447,14 @@ static void show_greenmag(void)
 
 	glBindTexture(GL_TEXTURE_2D, LEFT_TEX);
 	glColorMask(0, 1, 0, 1);
-	quad(-1, -1, 1, 1);
+	draw_quad(-1, -1, 1, 1);
 
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_ONE, GL_ONE);
 
 	glBindTexture(GL_TEXTURE_2D, RIGHT_TEX);
 	glColorMask(1, 0, 1, 1);
-	quad(-1, -1, 1, 1);
+	draw_quad(-1, -1, 1, 1);
 
 	glColorMask(1, 1, 1, 1);
 }
@@ -486,7 +491,7 @@ static void sdr_combine(const char *sdrsrc)
 	glBindTexture(GL_TEXTURE_2D, LEFT_TEX);
 	glEnable(GL_TEXTURE_2D);
 
-	quad(-1, -1, 1, 1);
+	draw_quad(-1, -1, 1, 1);
 
 	glActiveTextureARB(GL_TEXTURE1_ARB);
 	glDisable(GL_TEXTURE_2D);
@@ -498,7 +503,7 @@ static void sdr_combine(const char *sdrsrc)
 #endif	/* GL_ARB_shader_objects */
 }
 
-static void quad(float x1, float y1, float x2, float y2)
+static void draw_quad(float x1, float y1, float x2, float y2)
 {
 	glBegin(GL_QUADS);
 	glTexCoord2f(0, 0); glVertex2f(x1, y1);
@@ -514,7 +519,6 @@ static unsigned int create_pixel_shader(const char *src)
 #ifdef GL_ARB_shader_objects
 	int success, info_len;
 	char *info_str = 0;
-	GLenum err;
 
 	glGetError();
 
