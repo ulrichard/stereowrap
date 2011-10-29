@@ -11,6 +11,7 @@ obj = $(src:.c=.o)
 CC = gcc
 INSTALL = install
 CFLAGS = -Wall -fPIC -g -D_GNU_SOURCE
+LDFLAGS = -lpthread
 
 ifeq ($(shell uname -s), SunOS)
 	INSTALL = ginstall

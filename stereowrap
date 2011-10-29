@@ -1,5 +1,7 @@
 #!/bin/sh
 
+argv0=$0
+
 while [ $# -gt 0 ]; do
 	case "$1" in
 	-s)
@@ -16,8 +18,19 @@ while [ $# -gt 0 ]; do
 			echo "-m must be followed by the stereo presentation method" >&2
 			exit 1
 		fi
+		if [ "$2" = alternate ]; then
+			export __GL_SYNC_TO_VBLANK=1
+		fi
 		export STEREO_METHOD="$2"
 		shift;;
+
+	-h)
+		echo "usage: $argv0 [options]"
+		echo ' -s  swap left/right images'
+		echo ' -g  convert to greyscale before combining'
+		echo ' -f  use fixed-function pipeline, no shaders (will not work for some methods)'
+		echo ' -m  choose stereo presentation method'
+		exit 0;;
 	
 	-*)
 		echo "unrecognized option: $1" >&2
@@ -30,4 +43,5 @@ while [ $# -gt 0 ]; do
 	shift
 done
 
+echo "-- stereowrap($STEREO_METHOD): $*"
 LD_PRELOAD=libstereowrap.so $*

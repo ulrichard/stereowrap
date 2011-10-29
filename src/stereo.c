@@ -1,6 +1,6 @@
 /*
 stereowrap - an OpenGL stereoscopic emulation layer.
-Copyright (C) 2010 John Tsiombikas <nuclear@member.fsf.org>
+Copyright (C) 2010 - 2011 John Tsiombikas <nuclear@member.fsf.org>
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -23,13 +23,16 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <X11/Xlib.h>
 #include <GL/gl.h>
 #include <GL/glx.h>
+#include "stream.h"
 
 enum {
 	CROSS,
 	REDBLUE,
 	REDCYAN,
 	GREENMAG,
-	COLORCODE
+	COLORCODE,
+	ALTERNATE,
+	STREAM
 };
 
 #define LEFT_TEX	rtex[swap_eyes ? 1 : 0]
@@ -51,6 +54,8 @@ static void show_redblue(void);
 static void show_redcyan(void);
 static void show_greenmag(void);
 static void show_colorcode(void);
+static void show_alternate(void);
+static void show_stream(void);
 static void sdr_combine(const char *sdr);
 
 static void (*draw_buffer)(GLenum);
@@ -66,6 +71,9 @@ static int stereo_method;
 static int grey;
 static int use_shaders = 1;		/* if available */
 
+static Display *dpy;
+static GLXDrawable drawable;
+
 #ifdef GL_ARB_shader_objects
 static PFNGLCREATEPROGRAMOBJECTARBPROC glCreateProgramObjectARB;
 static PFNGLCREATESHADEROBJECTARBPROC glCreateShaderObjectARB;
@@ -80,7 +88,7 @@ static PFNGLGETINFOLOGARBPROC glGetInfoLogARB;
 static PFNGLGETUNIFORMLOCATIONARBPROC glGetUniformLocationARB;
 static PFNGLUNIFORM1IARBPROC glUniform1iARB;
 
-static PFNGLACTIVETEXTUREARBPROC glActiveTextureARB;
+/*static PFNGLACTIVETEXTUREARBPROC glActiveTextureARB;*/
 
 #endif	/* GL_ARB_shader_objects */
 
@@ -97,6 +105,8 @@ static struct {
 #ifndef NOCOLORCODE
 	{COLORCODE, "colorcode", 1, show_colorcode},
 #endif
+	{ALTERNATE, "alternate", 0, show_alternate},
+	{STREAM, "stream", 0, show_stream},
 	{0, 0, 0, 0}
 };
 
@@ -104,6 +114,8 @@ static struct {
 static int init(void)
 {
 	static int init_done;
+	int port = 31337;
+	char *host = "localhost";
 	char *env = 0;
 
 	if(init_done) return 0;
@@ -114,7 +126,7 @@ static int init(void)
 	choose_fbconfig = dlsym(RTLD_NEXT, "glXChooseFBConfig");
 
 	if(!draw_buffer || !swap_buffers || !choose_visual) {
-		fprintf(stderr, "failed to load GL/GLX functions\n");
+		fprintf(stderr, "stereowrap: failed to load GL/GLX functions\n");
 		return -1;
 	}
 
@@ -145,6 +157,33 @@ static int init(void)
 		}
 	}
 
+	if((env = getenv("STEREO_STREAM"))) {
+		host = alloca(strlen(env) + 1);
+		strcpy(host, env);
+
+		char *ptr = strchr(host, ':');
+		if(ptr) {
+			char *endptr;
+			int res;
+
+			*ptr++ = 0;
+			res = strtol(ptr, &endptr, 10);
+			if(endptr != ptr) {
+				port = res;
+			}
+		}
+	}
+
+	if(stereo_method == STREAM) {
+		int vp[4];
+		glGetIntegerv(GL_VIEWPORT, vp);
+
+		if(init_stream(host, port) == -1) {
+			fprintf(stderr, "stereowrap: failed to initialize streaming\n");
+			return -1;
+		}
+	}
+
 	init_done = 1;
 	return 0;
 }
@@ -160,10 +199,10 @@ static int init_textures(void)
 			ysz = vp[3];
 
 			glBindTexture(GL_TEXTURE_2D, rtex[0]);
-			glTexImage2D(GL_TEXTURE_2D, 0, grey ? 1 : 3, xsz, ysz, 0, GL_RGBA, GL_UNSIGNED_BYTE, 0);
+			glTexImage2D(GL_TEXTURE_2D, 0, grey ? 1 : 3, xsz, ysz, 0, GL_RGB, GL_UNSIGNED_BYTE, 0);
 
 			glBindTexture(GL_TEXTURE_2D, rtex[1]);
-			glTexImage2D(GL_TEXTURE_2D, 0, grey ? 1 : 3, xsz, ysz, 0, GL_RGBA, GL_UNSIGNED_BYTE, 0);
+			glTexImage2D(GL_TEXTURE_2D, 0, grey ? 1 : 3, xsz, ysz, 0, GL_RGB, GL_UNSIGNED_BYTE, 0);
 		}
 	} else {
 		int i;
@@ -208,7 +247,7 @@ static int init_sdr(void)
 	glGetUniformLocationARB = get_proc(PFNGLGETUNIFORMLOCATIONARBPROC, "glGetUniformLocationARB");
 	glUniform1iARB = get_proc(PFNGLUNIFORM1IARBPROC, "glUniform1iARB");
 
-	glActiveTextureARB = get_proc(PFNGLACTIVETEXTUREARBPROC, "glActiveTextureARB");
+	/*glActiveTextureARB = get_proc(PFNGLACTIVETEXTUREARBPROC, "glActiveTextureARB");*/
 
 	if(!glCreateProgramObjectARB) {
 		return -1;
@@ -236,8 +275,11 @@ void glDrawBuffer(GLenum buf)
 	cur_buf = new_buf;
 }
 
-void glXSwapBuffers(Display *dpy, GLXDrawable drawable)
+void glXSwapBuffers(Display *_dpy, GLXDrawable _drawable)
 {
+	dpy = _dpy;
+	drawable = _drawable;
+
 	if(init() == -1) {
 		return;
 	}
@@ -353,6 +395,10 @@ static void show_stereo_pair(void)
 	glDisable(GL_FOG);
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 	glColor3f(1, 1, 1);
+
+	if(USE_SDR) {
+		glUseProgramObjectARB(0);
+	}
 
 	method[stereo_method].func();
 
@@ -491,6 +537,23 @@ static void show_colorcode(void)
 	sdr_combine(colorcode_shader);
 }
 
+static void show_alternate(void)
+{
+	glEnable(GL_TEXTURE_2D);
+	glBindTexture(GL_TEXTURE_2D, LEFT_TEX);
+	draw_quad(-1, -1, 1, 1);
+
+	swap_buffers(dpy, drawable);
+
+	glBindTexture(GL_TEXTURE_2D, RIGHT_TEX);
+	draw_quad(-1, -1, 1, 1);
+}
+
+static void show_stream(void)
+{
+	stereo_stream(xsz, ysz, LEFT_TEX, RIGHT_TEX);
+}
+
 static void sdr_combine(const char *sdrsrc)
 {
 #ifdef GL_ARB_shader_objects
@@ -510,20 +573,20 @@ static void sdr_combine(const char *sdrsrc)
 	glUniform1iARB(loc_left, 0);
 	glUniform1iARB(loc_right, 1);
 
-	glActiveTextureARB(GL_TEXTURE1_ARB);
+	glActiveTexture(GL_TEXTURE1_ARB);
 	glBindTexture(GL_TEXTURE_2D, RIGHT_TEX);
 	glEnable(GL_TEXTURE_2D);
 
-	glActiveTextureARB(GL_TEXTURE0_ARB);
+	glActiveTexture(GL_TEXTURE0_ARB);
 	glBindTexture(GL_TEXTURE_2D, LEFT_TEX);
 	glEnable(GL_TEXTURE_2D);
 
 	draw_quad(-1, -1, 1, 1);
 
-	glActiveTextureARB(GL_TEXTURE1_ARB);
+	glActiveTexture(GL_TEXTURE1_ARB);
 	glDisable(GL_TEXTURE_2D);
 
-	glActiveTextureARB(GL_TEXTURE0_ARB);
+	glActiveTexture(GL_TEXTURE0_ARB);
 	glDisable(GL_TEXTURE_2D);
 
 	glUseProgramObjectARB(0);
