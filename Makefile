@@ -9,13 +9,8 @@ src = $(wildcard src/*.c)
 obj = $(src:.c=.o)
 
 CC = gcc
-INSTALL = install
 CFLAGS = -Wall -fPIC -g -D_GNU_SOURCE
 LDFLAGS = -lpthread
-
-ifeq ($(shell uname -s), SunOS)
-	INSTALL = ginstall
-endif
 
 $(lib_so): $(obj)
 	$(CC) -o $@ -shared -Wl,-soname,$(soname) $(obj) $(LDFLAGS)
@@ -26,11 +21,12 @@ clean:
 
 .PHONY: install
 install:
-	$(INSTALL) -d $(PREFIX)/bin
-	$(INSTALL) -d $(PREFIX)/lib
-	$(INSTALL) -m 644 $(lib_so) $(PREFIX)/lib/$(lib_so)
-	cd $(PREFIX)/lib; rm -f $(linkname); ln -s $(lib_so) $(linkname)
-	$(INSTALL) -m 755 $(bin) $(PREFIX)/bin/$(bin)
+	mkdir -p $(PREFIX)/bin $(PREFIX)/lib
+	cp $(lib_so) $(PREFIX)/lib/$(lib_so)
+	rm -f $(PREFIX)/lib/$(linkname) $(PREFIX)/lib/$(soname)
+	ln -s $(PREFIX)/lib/$(lib_so) $(PREFIX)/lib/$(soname)
+	ln -s $(PREFIX)/lib/$(soname) $(PREFIX)/lib/$(linkname)
+	cp $(bin) $(PREFIX)/bin/$(bin)
 
 .PHONY: uninstall
 uninstall:
