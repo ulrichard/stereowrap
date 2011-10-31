@@ -25,6 +25,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <GL/glx.h>
 #include "stream.h"
 
+#define DEBUG \
+	do { \
+		if(debug) \
+			printf("STEREOWRAP_DEBUG: %s called\n", __func__); \
+	} while(0)
+
 enum {
 	CROSS,
 	REDBLUE,
@@ -70,6 +76,7 @@ static int swap_eyes;
 static int stereo_method;
 static int grey;
 static int use_shaders = 1;		/* if available */
+static int debug;
 
 static Display *dpy;
 static GLXDrawable drawable;
@@ -184,6 +191,10 @@ static int init(void)
 		}
 	}
 
+	if(getenv("STEREOWRAP_DEBUG")) {
+		debug = 1;
+	}
+
 	init_done = 1;
 	return 0;
 }
@@ -268,6 +279,8 @@ void glDrawBuffer(GLenum buf)
 	}
 	init_textures();
 
+	DEBUG;
+
 	if(cur_buf != -1) {
 		glBindTexture(GL_TEXTURE_2D, rtex[cur_buf]);
 		glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, xsz, ysz);
@@ -284,6 +297,8 @@ void glXSwapBuffers(Display *_dpy, GLXDrawable _drawable)
 		return;
 	}
 	init_textures();
+
+	DEBUG;
 
 	if(cur_buf != -1) {
 		glBindTexture(GL_TEXTURE_2D, rtex[cur_buf]);
@@ -303,6 +318,7 @@ XVisualInfo *glXChooseVisual(Display *dpy, int scr, int *attr)
 	if(init() == -1) {
 		return 0;
 	}
+	DEBUG;
 
 	dest = src = attr;
 	do {
@@ -346,6 +362,7 @@ GLXFBConfig *glXChooseFBConfig(Display *dpy, int scr, const int *attr, int *nite
 	if(init() == -1 || !choose_fbconfig) {
 		return 0;
 	}
+	DEBUG;
 
 	dest = src = (int*)attr;
 	do {
