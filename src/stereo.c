@@ -32,6 +32,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 	} while(0)
 
 enum {
+	PARALLEL,
 	CROSS,
 	REDBLUE,
 	REDCYAN,
@@ -55,6 +56,7 @@ GLXFBConfig *glXChooseFBConfig(Display *dpy, int scr, const int *attr, int *nite
 static void show_stereo_pair(void);
 static void draw_quad(float x1, float y1, float x2, float y2);
 static unsigned int create_pixel_shader(const char *src);
+static void show_parallel(void);
 static void show_cross(void);
 static void show_redblue(void);
 static void show_redcyan(void);
@@ -113,6 +115,7 @@ static struct {
 	int need_sdr;
 	void (*func)(void);
 } method[] = {
+	{PARALLEL, "parallel", 0, show_parallel},
 	{CROSS, "cross", 0, show_cross},
 	{REDBLUE, "redblue", 0, show_redblue},
 	{REDCYAN, "redcyan", 0, show_redcyan},
@@ -509,12 +512,20 @@ static const char *colorcode_shader =
 	"    gl_FragColor = vec4(col, 1.0);\n"
 	"}\n";
 
-static void show_cross(void)
+static void show_parallel(void)
 {
 	glBindTexture(GL_TEXTURE_2D, LEFT_TEX);
 	draw_quad(-1, -1, 0, 1);
 	glBindTexture(GL_TEXTURE_2D, RIGHT_TEX);
 	draw_quad(0, -1, 1, 1);
+}
+
+static void show_cross(void)
+{
+	glBindTexture(GL_TEXTURE_2D, LEFT_TEX);
+	draw_quad(0, -1, 1, 1);
+	glBindTexture(GL_TEXTURE_2D, RIGHT_TEX);
+	draw_quad(-1, -1, 0, 1);
 }
 
 static void show_redblue(void)
