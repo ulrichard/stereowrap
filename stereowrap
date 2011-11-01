@@ -18,8 +18,10 @@ while [ $# -gt 0 ]; do
 			echo "-m must be followed by the stereo presentation method" >&2
 			exit 1
 		fi
-		if [ "$2" = alternate ]; then
-			export __GL_SYNC_TO_VBLANK=1
+		if [ "$2" = sequential ]; then
+			# stereowrap tries to enable vsync through OpenGL extensions if
+			# available, but just in case let's also set a few known env-vars.
+			export __GL_SYNC_TO_VBLANK=1	# <- for nvidia
 		fi
 		export STEREO_METHOD="$2"
 		shift;;

@@ -37,7 +37,7 @@ enum {
 	REDCYAN,
 	GREENMAG,
 	COLORCODE,
-	ALTERNATE,
+	SEQUENTIAL,
 	STREAM
 };
 
@@ -47,7 +47,7 @@ enum {
 
 static int init(void);
 static int init_textures(void);
-static int init_sdr(void);
+static int init_ext(void);
 void glDrawBuffer(GLenum buf);
 void glXSwapBuffers(Display *dpy, GLXDrawable drawable);
 XVisualInfo *glXChooseVisual(Display *dpy, int scr, int *attr);
@@ -60,7 +60,7 @@ static void show_redblue(void);
 static void show_redcyan(void);
 static void show_greenmag(void);
 static void show_colorcode(void);
-static void show_alternate(void);
+static void show_sequential(void);
 static void show_stream(void);
 static void sdr_combine(const char *sdr);
 
@@ -99,6 +99,14 @@ static PFNGLUNIFORM1IARBPROC glUniform1iARB;
 
 #endif	/* GL_ARB_shader_objects */
 
+#ifdef GLX_SGI_swap_control
+static PFNGLXSWAPINTERVALSGIPROC glXSwapIntervalSGI;
+#endif
+#ifdef GLX_EXT_swap_control
+static PFNGLXSWAPINTERVALEXTPROC glXSwapIntervalEXT;
+#endif
+
+
 static struct {
 	int id;
 	const char *name;
@@ -112,7 +120,7 @@ static struct {
 #ifndef NOCOLORCODE
 	{COLORCODE, "colorcode", 1, show_colorcode},
 #endif
-	{ALTERNATE, "alternate", 0, show_alternate},
+	{SEQUENTIAL, "sequential", 0, show_sequential},
 	{STREAM, "stream", 0, show_stream},
 	{0, 0, 0, 0}
 };
@@ -132,12 +140,13 @@ static int init(void)
 	choose_visual = dlsym(RTLD_NEXT, "glXChooseVisual");
 	choose_fbconfig = dlsym(RTLD_NEXT, "glXChooseFBConfig");
 
+
 	if(!draw_buffer || !swap_buffers || !choose_visual) {
 		fprintf(stderr, "stereowrap: failed to load GL/GLX functions\n");
 		return -1;
 	}
 
-	init_sdr();
+	init_ext();
 
 	if(getenv("STEREO_SWAP")) {
 		swap_eyes = 1;
@@ -181,14 +190,30 @@ static int init(void)
 		}
 	}
 
-	if(stereo_method == STREAM) {
-		int vp[4];
-		glGetIntegerv(GL_VIEWPORT, vp);
+	/* method-specific init */
+	switch(stereo_method) {
+	case STREAM:
+		{
+			int vp[4];
+			glGetIntegerv(GL_VIEWPORT, vp);
 
-		if(init_stream(host, port) == -1) {
-			fprintf(stderr, "stereowrap: failed to initialize streaming\n");
-			return -1;
+			if(init_stream(host, port) == -1) {
+				fprintf(stderr, "stereowrap: failed to initialize streaming\n");
+				return -1;
+			}
 		}
+		break;
+
+	case SEQUENTIAL:
+#ifdef GLX_SGI_swap_control
+		if(glXSwapIntervalSGI) {
+			glXSwapIntervalSGI(1);	/* enable v-sync */
+		}
+#endif
+		/* XXX glXSwapIntervalEXT requires dpy and drawable parameters
+		 * so we call it in swap_buffers below.
+		 */
+		break;
 	}
 
 	if(getenv("STEREOWRAP_DEBUG")) {
@@ -238,7 +263,7 @@ static int init_textures(void)
 	(type)glXGetProcAddressARB((unsigned char*)name)
 #endif
 
-static int init_sdr(void)
+static int init_ext(void)
 {
 #ifdef GL_ARB_shader_objects
 	if(glCreateShaderObjectARB) {
@@ -264,6 +289,13 @@ static int init_sdr(void)
 		return -1;
 	}
 #endif	/* GL_ARB_shader_objects */
+
+#ifdef GLX_SGI_swap_control
+	glXSwapIntervalSGI = get_proc(PFNGLXSWAPINTERVALSGIPROC, "glXSwapIntervalSGI");
+#endif
+#ifdef GLX_EXT_swap_control
+	glXSwapIntervalEXT = get_proc(PFNGLXSWAPINTERVALEXTPROC, "glXSwapIntervalEXT");
+#endif
 	return 0;
 }
 
@@ -308,6 +340,11 @@ void glXSwapBuffers(Display *_dpy, GLXDrawable _drawable)
 	}
 	cur_buf = -1;
 
+#ifdef GLX_EXT_swap_control
+	if(glXSwapIntervalEXT) {
+		glXSwapIntervalEXT(dpy, drawable, 1);
+	}
+#endif
 	swap_buffers(dpy, drawable);
 }
 
@@ -554,7 +591,7 @@ static void show_colorcode(void)
 	sdr_combine(colorcode_shader);
 }
 
-static void show_alternate(void)
+static void show_sequential(void)
 {
 	glEnable(GL_TEXTURE_2D);
 	glBindTexture(GL_TEXTURE_2D, LEFT_TEX);
