@@ -23,7 +23,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <X11/Xlib.h>
 #include <GL/gl.h>
 #include <GL/glx.h>
-#include "stream.h"
 
 #define DEBUG \
 	do { \
@@ -38,8 +37,7 @@ enum {
 	REDCYAN,
 	GREENMAG,
 	COLORCODE,
-	SEQUENTIAL,
-	STREAM
+	SEQUENTIAL
 };
 
 #define LEFT_TEX	rtex[swap_eyes ? 1 : 0]
@@ -63,7 +61,6 @@ static void show_redcyan(void);
 static void show_greenmag(void);
 static void show_colorcode(void);
 static void show_sequential(void);
-static void show_stream(void);
 static void sdr_combine(const char *sdr);
 
 static void (*draw_buffer)(GLenum);
@@ -124,7 +121,6 @@ static struct {
 	{COLORCODE, "colorcode", 1, show_colorcode},
 #endif
 	{SEQUENTIAL, "sequential", 0, show_sequential},
-	{STREAM, "stream", 0, show_stream},
 	{0, 0, 0, 0}
 };
 
@@ -132,8 +128,6 @@ static struct {
 static int init(void)
 {
 	static int init_done;
-	int port = 31337;
-	char *host = "localhost";
 	char *env = 0;
 
 	if(init_done) return 0;
@@ -176,38 +170,8 @@ static int init(void)
 		}
 	}
 
-	if((env = getenv("STEREO_STREAM"))) {
-		host = alloca(strlen(env) + 1);
-		strcpy(host, env);
-
-		char *ptr = strchr(host, ':');
-		if(ptr) {
-			char *endptr;
-			int res;
-
-			*ptr++ = 0;
-			res = strtol(ptr, &endptr, 10);
-			if(endptr != ptr) {
-				port = res;
-			}
-		}
-	}
-
 	/* method-specific init */
-	switch(stereo_method) {
-	case STREAM:
-		{
-			int vp[4];
-			glGetIntegerv(GL_VIEWPORT, vp);
-
-			if(init_stream(host, port) == -1) {
-				fprintf(stderr, "stereowrap: failed to initialize streaming\n");
-				return -1;
-			}
-		}
-		break;
-
-	case SEQUENTIAL:
+	if(stereo_method == SEQUENTIAL) {
 #ifdef GLX_SGI_swap_control
 		if(glXSwapIntervalSGI) {
 			glXSwapIntervalSGI(1);	/* enable v-sync */
@@ -216,7 +180,6 @@ static int init(void)
 		/* XXX glXSwapIntervalEXT requires dpy and drawable parameters
 		 * so we call it in swap_buffers below.
 		 */
-		break;
 	}
 
 	if(getenv("STEREOWRAP_DEBUG")) {
@@ -309,7 +272,11 @@ void glDrawBuffer(GLenum buf)
 	if(new_buf == cur_buf) {
 		return;
 	}
+
+	glPushAttrib(GL_ALL_ATTRIB_BITS);
+
 	if(init() == -1) {
+		glPopAttrib();
 		return;
 	}
 	init_textures();
@@ -321,6 +288,8 @@ void glDrawBuffer(GLenum buf)
 		glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, xsz, ysz);
 	}
 	cur_buf = new_buf;
+
+	glPopAttrib();
 }
 
 void glXSwapBuffers(Display *_dpy, GLXDrawable _drawable)
@@ -328,7 +297,10 @@ void glXSwapBuffers(Display *_dpy, GLXDrawable _drawable)
 	dpy = _dpy;
 	drawable = _drawable;
 
+	glPushAttrib(GL_ALL_ATTRIB_BITS);
+
 	if(init() == -1) {
+		glPopAttrib();
 		return;
 	}
 	init_textures();
@@ -342,6 +314,8 @@ void glXSwapBuffers(Display *_dpy, GLXDrawable _drawable)
 		show_stereo_pair();
 	}
 	cur_buf = -1;
+
+	glPopAttrib();
 
 #ifdef GLX_EXT_swap_control
 	if(glXSwapIntervalEXT) {
@@ -431,8 +405,6 @@ static void show_stereo_pair(void)
 {
 	glClear(GL_COLOR_BUFFER_BIT);
 
-	glPushAttrib(GL_ALL_ATTRIB_BITS);
-
 	glMatrixMode(GL_PROJECTION);
 	glPushMatrix();
 	glLoadIdentity();
@@ -465,8 +437,6 @@ static void show_stereo_pair(void)
 	glPopMatrix();
 	glMatrixMode(GL_MODELVIEW);
 	glPopMatrix();
-
-	glPopAttrib();
 }
 
 static const char *redblue_shader =
@@ -612,11 +582,6 @@ static void show_sequential(void)
 
 	glBindTexture(GL_TEXTURE_2D, RIGHT_TEX);
 	draw_quad(-1, -1, 1, 1);
-}
-
-static void show_stream(void)
-{
-	stereo_stream(xsz, ysz, LEFT_TEX, RIGHT_TEX);
 }
 
 static void sdr_combine(const char *sdrsrc)
