@@ -1,20 +1,26 @@
-stereowrap 0.1
-by John Tsiombikas <nuclear@member.fsf.org>
+stereowrap - 0.1
 
 About
 -----
-Stereowrap is an emulation layer implementing stereoscopic OpenGL visuals
-ontop of non stereo capable OpenGL implementations. To do that it overrides,
+Stereowrap is an emulation layer implementing stereoscopic OpenGL visuals on
+top of non stereo capable OpenGL implementations. To do that it overrides,
 using LD_PRELOAD, the GLX visual selection functions (glXChooseVisual and
-glXChooseFBConfig), glDrawBuffer, and glXSwapBuffers to capture and composite in
-a number of ways the two stereo images rendered by the application.
+glXChooseFBConfig), glDrawBuffer, and glXSwapBuffers to capture and composite
+the two stereo images rendered by the application, in a number of ways. 
 
-Currently stereowrap supports presenting the stereo images side by side
-(cross-eyed stereo), or compositing them using various color anaglyph methods
-such as red-blue, red-cyan, and color-code (aka amber-blue).
+Currently stereowrap supports presenting the stereo pair in the following ways:
+ * parallel side-by-side (-m parallel)
+ * side-by-side (-m cross)
+ * color anaglyph:
+   - red-cyan (-m redcyan)
+   - red-blue (-m redblue)
+   - green-magenta (-m greenmagenta)
+   - colorcode3d, aka amber-blue (-m colorcode) 
+ * sequential left/right sync-ed to vblank (-m sequential) 
 
 License
 -------
+Copyright (C) 2010 - 2011 John Tsiombikas <nuclear@member.fsf.org>
 Stereowrap is free software, distributed under the terms of the GNU General
 Public License version 3, or any later version published by the Free Software
 Foundation. See COPYING file for details.
