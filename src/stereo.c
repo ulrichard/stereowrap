@@ -574,6 +574,18 @@ static void show_colorcode(void)
 
 static void show_sequential(void)
 {
+	XEvent xev;
+
+	/* force the application to redraw immediately afterwards to
+	 * try and stay in sync with the monitor refresh.
+	 */
+	xev.type = Expose;
+	xev.xexpose.x = xev.xexpose.y = 0;
+	xev.xexpose.window = drawable;
+	xev.xexpose.width = xev.xexpose.height = 1;	/* hopefully most OpenGL programs will just redraw everything */
+	xev.xexpose.count = 0;
+	XSendEvent(dpy, xev.xexpose.window, True, 0, &xev);
+
 	glEnable(GL_TEXTURE_2D);
 	glBindTexture(GL_TEXTURE_2D, LEFT_TEX);
 	draw_quad(-1, -1, 1, 1);
