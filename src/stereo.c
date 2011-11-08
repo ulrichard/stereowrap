@@ -307,6 +307,12 @@ void glXSwapBuffers(Display *_dpy, GLXDrawable _drawable)
 
 	DEBUG;
 
+#ifdef GLX_EXT_swap_control
+	if(glXSwapIntervalEXT) {
+		glXSwapIntervalEXT(dpy, drawable, 1);
+	}
+#endif
+
 	if(cur_buf != -1) {
 		glBindTexture(GL_TEXTURE_2D, rtex[cur_buf]);
 		glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, xsz, ysz);
@@ -317,11 +323,6 @@ void glXSwapBuffers(Display *_dpy, GLXDrawable _drawable)
 
 	glPopAttrib();
 
-#ifdef GLX_EXT_swap_control
-	if(glXSwapIntervalEXT) {
-		glXSwapIntervalEXT(dpy, drawable, 1);
-	}
-#endif
 	swap_buffers(dpy, drawable);
 }
 
@@ -575,16 +576,16 @@ static void show_colorcode(void)
 static void show_sequential(void)
 {
 	XEvent xev;
-
 	/* force the application to redraw immediately afterwards to
 	 * try and stay in sync with the monitor refresh.
 	 */
 	xev.type = Expose;
-	xev.xexpose.x = xev.xexpose.y = 0;
 	xev.xexpose.window = drawable;
-	xev.xexpose.width = xev.xexpose.height = 1;	/* hopefully most OpenGL programs will just redraw everything */
+	xev.xexpose.x = xev.xexpose.y = 0;
+	xev.xexpose.width = xsz;
+	xev.xexpose.height = ysz;
 	xev.xexpose.count = 0;
-	XSendEvent(dpy, xev.xexpose.window, True, 0, &xev);
+	XSendEvent(dpy, drawable, False, 0, &xev);
 
 	glEnable(GL_TEXTURE_2D);
 	glBindTexture(GL_TEXTURE_2D, LEFT_TEX);
