@@ -1,6 +1,6 @@
 /*
 stereowrap - an OpenGL stereoscopic emulation layer.
-Copyright (C) 2010 - 2011 John Tsiombikas <nuclear@member.fsf.org>
+Copyright (C) 2010 - 2012 John Tsiombikas <nuclear@member.fsf.org>
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -294,6 +294,7 @@ void glDrawBuffer(GLenum buf)
 
 void glXSwapBuffers(Display *_dpy, GLXDrawable _drawable)
 {
+	static int called_swapint;
 	dpy = _dpy;
 	drawable = _drawable;
 
@@ -308,8 +309,11 @@ void glXSwapBuffers(Display *_dpy, GLXDrawable _drawable)
 	DEBUG;
 
 #ifdef GLX_EXT_swap_control
-	if(glXSwapIntervalEXT) {
-		glXSwapIntervalEXT(dpy, drawable, 1);
+	if(!called_swapint) {
+		if(glXSwapIntervalEXT) {
+			glXSwapIntervalEXT(dpy, drawable, 1);
+		}
+		called_swapint = 1;
 	}
 #endif
 
