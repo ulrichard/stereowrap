@@ -19,7 +19,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
+#include <unistd.h>
 #include <dlfcn.h>
+#include <pwd.h>
 #include <X11/Xlib.h>
 #include <GL/gl.h>
 #include <GL/glx.h>
@@ -45,6 +47,8 @@ enum {
 #define USE_SDR		(glCreateProgramObjectARB != 0 && use_shaders)
 
 static int init(void);
+static int readcfg(void);
+static int parse_method(const char *name);
 static int init_textures(void);
 static int init_ext(void);
 void glDrawBuffer(GLenum buf);
@@ -132,6 +136,8 @@ static int init(void)
 
 	if(init_done) return 0;
 
+	readcfg();
+
 	draw_buffer = dlsym(RTLD_NEXT, "glDrawBuffer");
 	swap_buffers = dlsym(RTLD_NEXT, "glXSwapBuffers");
 	choose_visual = dlsym(RTLD_NEXT, "glXChooseVisual");
@@ -158,15 +164,10 @@ static int init(void)
 	}
 
 	if((env = getenv("STEREO_METHOD"))) {
-		int i;
-		for(i=0; method[i].name; i++) {
-			if(strcmp(env, method[i].name) == 0) {
-				/* only select a shader-based method if we have shaders */
-				if(!method[i].need_sdr || USE_SDR) {
-					stereo_method = i;
-					break;
-				}
-			}
+		int idx = parse_method(env);
+		/* only select a shader-based method if we have shaders */
+		if(idx >= 0 && (!method[idx].need_sdr || USE_SDR)) {
+			stereo_method = idx;
 		}
 	}
 
@@ -188,6 +189,69 @@ static int init(void)
 
 	init_done = 1;
 	return 0;
+}
+
+#define CFGFILE		".stereowrap.conf"
+static int readcfg(void)
+{
+	char *home, buf[512];
+	FILE *fp;
+	struct passwd *pw;
+
+	if((pw = getpwuid(getuid()))) {
+		home = pw->pw_dir;
+	} else {
+		home = getenv("HOME");
+	}
+	snprintf(buf, sizeof buf, "%s/%s", home, CFGFILE);
+
+	if(!(fp = fopen(buf, "r"))) {
+		return -1;
+	}
+
+	while(fgets(buf, sizeof buf, fp)) {
+		char *name, *val;
+		int enable = -1;
+
+		if(!(name = strtok(buf, " \t\r\n:=")))
+			continue;
+
+		if((val = strtok(0, " \t\r\n:="))) {
+			if(strcmp(val, "true") == 0) {
+				enable = 1;
+			} else if(strcmp(val, "false") == 0) {
+				enable = 0;
+			}
+		} else {
+			enable = 1;
+		}
+
+		if(strcmp(name, "method") == 0) {
+			int idx = parse_method(val);
+			/* only select a shader-based method if we have shaders */
+			if(idx >= 0 && (!method[idx].need_sdr || USE_SDR)) {
+				stereo_method = idx;
+			}
+		} else if(strcmp(name, "swap") == 0 && enable != -1) {
+			swap_eyes = enable;
+		} else if(strcmp(name, "grey") == 0 && enable != -1) {
+			grey = enable;
+		}
+	}
+
+	fclose(fp);
+	return 0;
+}
+
+static int parse_method(const char *name)
+{
+	int i;
+	for(i=0; method[i].name; i++) {
+		if(strcmp(name, method[i].name) == 0) {
+			return i;
+		}
+	}
+	return -1;
 }
 
 static int init_textures(void)

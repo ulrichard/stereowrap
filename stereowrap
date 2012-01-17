@@ -46,4 +46,4 @@ while [ $# -gt 0 ]; do
 done
 
 echo "-- stereowrap($STEREO_METHOD): $*"
-LD_PRELOAD=libstereowrap.so $*
+LD_PRELOAD="libstereowrap.so $LD_PRELOAD" $*
