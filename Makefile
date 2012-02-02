@@ -10,7 +10,7 @@ obj = $(src:.c=.o)
 
 CC = gcc
 CFLAGS = -Wall -fPIC -g -D_GNU_SOURCE
-LDFLAGS = -lpthread
+LDFLAGS = -lGL -lpthread
 
 $(lib_so): $(obj)
 	$(CC) -o $@ -shared -Wl,-soname,$(soname) $(obj) $(LDFLAGS)
