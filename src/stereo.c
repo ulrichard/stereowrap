@@ -171,18 +171,6 @@ static int init(void)
 		}
 	}
 
-	/* method-specific init */
-	if(stereo_method == SEQUENTIAL) {
-#ifdef GLX_SGI_swap_control
-		if(glXSwapIntervalSGI) {
-			glXSwapIntervalSGI(1);	/* enable v-sync */
-		}
-#endif
-		/* XXX glXSwapIntervalEXT requires dpy and drawable parameters
-		 * so we call it in swap_buffers below.
-		 */
-	}
-
 	if(getenv("STEREOWRAP_DEBUG")) {
 		debug = 1;
 	}
@@ -372,14 +360,23 @@ void glXSwapBuffers(Display *_dpy, GLXDrawable _drawable)
 
 	DEBUG;
 
+	/* Deferred initialization.
+	 * VSync must be enabled, for the sequential method to work
+	 * correctly with vsync-driven shutter glasses.
+	 */
+	if(stereo_method == SEQUENTIAL && !called_swapint) {
 #ifdef GLX_EXT_swap_control
-	if(!called_swapint) {
 		if(glXSwapIntervalEXT) {
 			glXSwapIntervalEXT(dpy, drawable, 1);
 		}
+#elif defined(GLX_SGI_swap_control)
+		if(glXSwapIntervalSGI) {
+			glXSwapIntervalSGI(1);
+		}
+#endif
 		called_swapint = 1;
 	}
-#endif
+
 
 	if(cur_buf != -1) {
 		glBindTexture(GL_TEXTURE_2D, rtex[cur_buf]);
