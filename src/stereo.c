@@ -82,7 +82,7 @@ static int stereo_method;
 static int grey;
 static int use_shaders = 1;		/* if available */
 static int debug;
-static int serial_port;
+static FILE* serial_port;
 
 static Display *dpy;
 static GLXDrawable drawable;
@@ -186,22 +186,27 @@ static int init(void)
 		 */
 
 		// open the serial port for controlling the shutter glasses
-		serial_port = open("/dev/ttyUSB0", O_RDWR | O_NOCTTY | O_NONBLOCK); // todo : make the port configurable
-		if(serial_port < 0)
+		serial_port = open("/dev/ttyUSB0", O_RDWR | O_NOCTTY /*| O_NONBLOCK*/); // todo : make the port configurable
+		if(serial_port <= 0)
 			fprintf(stderr, "stereowrap: failed to open serial port\n");
+		else
+		{
+			struct termios oldtio, newtio;       //place for old and new port settings for serial port
+			tcgetattr(serial_port, &oldtio); // save current port settings
+			memset (&newtio, 0, sizeof newtio);
 
-		struct termios oldtio, newtio;       //place for old and new port settings for serial port
-		tcgetattr(serial_port,&oldtio); // save current port settings 
-      	// set new port settings for canonical input processing
- 
-      	newtio.c_cflag = B38400 | CRTSCTS | CS8 | 0 | 0 | 0 | CLOCAL | CREAD;
-      	newtio.c_iflag = IGNPAR;
-      	newtio.c_oflag = 0;
-      	newtio.c_lflag = 0;       //ICANON;
-      	newtio.c_cc[VMIN]=1;
-      	newtio.c_cc[VTIME]=0;
-      	tcflush(serial_port, TCIFLUSH);
-      	tcsetattr(serial_port,TCSANOW,&newtio);
+	 
+		  	newtio.c_cflag = B38400 | CS8 | CLOCAL | CWRITE;
+		  	newtio.c_iflag = IGNPAR;
+		  	newtio.c_oflag = 0;
+		  	newtio.c_lflag = 0;       //ICANON;
+		  	newtio.c_cc[VMIN]=1;
+		  	newtio.c_cc[VTIME]=0;
+		  	tcflush(serial_port, TCIFLUSH);
+		  	tcsetattr(serial_port,TCSANOW,&newtio);
+
+			fprintf(stdout, "stereowrap: serial port opened\n");
+		}
 	}
 
 	if(getenv("STEREOWRAP_DEBUG")) {
@@ -681,7 +686,7 @@ static void show_sequential(void)
 	draw_quad(-1, -1, 1, 1);
 
 	if(serial_port)
-		fputs("r", serial_port);
+		fputc((int)'r', serial_port);
 
 	swap_buffers(dpy, drawable);
 
@@ -689,7 +694,7 @@ static void show_sequential(void)
 	draw_quad(-1, -1, 1, 1);
 
 	if(serial_port)
-		fputs("l", serial_port);
+		fputc((int)'l', serial_port);
 
 }
 

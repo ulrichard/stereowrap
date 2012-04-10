@@ -1,29 +1,34 @@
 
 
-int leftEye   =  3;  
-int rightEye  =  4; 
+const int leftEye   =  3;  
+const int rightEye  =  4; 
+int inByte = 0;
 
 void setup()   
 {       
-  Serial.begin(19200);  
+  Serial.begin(38400);  
   // initialize the digital pin as an output:
   pinMode(leftEye, OUTPUT);     
   pinMode(rightEye, OUTPUT);      
 }
 
-// the loop() method runs over and over again,
-// as long as the Arduino has power
-
-int delaytime = 100;
-int cnt = 0;
 void loop()                     
 {
-
-  digitalWrite(leftEye, HIGH);
-  digitalWrite(rightEye, LOW);
-  delay(delaytime);
-  digitalWrite(leftEye, LOW);
-  digitalWrite(rightEye, HIGH);
-  delay(delaytime);
+    if(Serial.available() > 0) 
+    {
+        // get incoming byte:
+        inByte = Serial.read();
+        
+        if(inByte == 'l')
+        {
+            digitalWrite(leftEye,  HIGH);
+            digitalWrite(rightEye, LOW);
+        }
+        if(inByte == 'r')
+        {
+            digitalWrite(leftEye,  LOW);
+            digitalWrite(rightEye, HIGH);
+        }
+    }
 }
 
