@@ -22,6 +22,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <unistd.h>
 #include <dlfcn.h>
 #include <pwd.h>
+#include <termios.h>
+#include <fcntl.h>
 #include <X11/Xlib.h>
 #include <GL/gl.h>
 #include <GL/glx.h>
@@ -80,6 +82,7 @@ static int stereo_method;
 static int grey;
 static int use_shaders = 1;		/* if available */
 static int debug;
+static int serial_port;
 
 static Display *dpy;
 static GLXDrawable drawable;
@@ -169,6 +172,36 @@ static int init(void)
 		if(idx >= 0 && (!method[idx].need_sdr || USE_SDR)) {
 			stereo_method = idx;
 		}
+	}
+
+	/* method-specific init */
+	if(stereo_method == SEQUENTIAL) {
+#ifdef GLX_SGI_swap_control
+		if(glXSwapIntervalSGI) {
+			glXSwapIntervalSGI(1);	/* enable v-sync */
+		}
+#endif
+		/* XXX glXSwapIntervalEXT requires dpy and drawable parameters
+		 * so we call it in swap_buffers below.
+		 */
+
+		// open the serial port for controlling the shutter glasses
+		serial_port = open("/dev/ttyUSB0", O_RDWR | O_NOCTTY | O_NONBLOCK); // todo : make the port configurable
+		if(serial_port < 0)
+			fprintf(stderr, "stereowrap: failed to open serial port\n");
+
+		struct termios oldtio, newtio;       //place for old and new port settings for serial port
+		tcgetattr(serial_port,&oldtio); // save current port settings 
+      	// set new port settings for canonical input processing
+ 
+      	newtio.c_cflag = B38400 | CRTSCTS | CS8 | 0 | 0 | 0 | CLOCAL | CREAD;
+      	newtio.c_iflag = IGNPAR;
+      	newtio.c_oflag = 0;
+      	newtio.c_lflag = 0;       //ICANON;
+      	newtio.c_cc[VMIN]=1;
+      	newtio.c_cc[VTIME]=0;
+      	tcflush(serial_port, TCIFLUSH);
+      	tcsetattr(serial_port,TCSANOW,&newtio);
 	}
 
 	if(getenv("STEREOWRAP_DEBUG")) {
@@ -360,23 +393,14 @@ void glXSwapBuffers(Display *_dpy, GLXDrawable _drawable)
 
 	DEBUG;
 
-	/* Deferred initialization.
-	 * VSync must be enabled, for the sequential method to work
-	 * correctly with vsync-driven shutter glasses.
-	 */
-	if(stereo_method == SEQUENTIAL && !called_swapint) {
 #ifdef GLX_EXT_swap_control
+	if(!called_swapint) {
 		if(glXSwapIntervalEXT) {
 			glXSwapIntervalEXT(dpy, drawable, 1);
 		}
-#elif defined(GLX_SGI_swap_control)
-		if(glXSwapIntervalSGI) {
-			glXSwapIntervalSGI(1);
-		}
-#endif
 		called_swapint = 1;
 	}
-
+#endif
 
 	if(cur_buf != -1) {
 		glBindTexture(GL_TEXTURE_2D, rtex[cur_buf]);
@@ -656,10 +680,17 @@ static void show_sequential(void)
 	glBindTexture(GL_TEXTURE_2D, LEFT_TEX);
 	draw_quad(-1, -1, 1, 1);
 
+	if(serial_port)
+		fputs("r", serial_port);
+
 	swap_buffers(dpy, drawable);
 
 	glBindTexture(GL_TEXTURE_2D, RIGHT_TEX);
 	draw_quad(-1, -1, 1, 1);
+
+	if(serial_port)
+		fputs("l", serial_port);
+
 }
 
 static void sdr_combine(const char *sdrsrc)
