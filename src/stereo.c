@@ -82,7 +82,7 @@ static int stereo_method;
 static int grey;
 static int use_shaders = 1;		/* if available */
 static int debug;
-static FILE* serial_port;
+static int serial_port;
 
 static Display *dpy;
 static GLXDrawable drawable;
@@ -195,8 +195,8 @@ static int init(void)
 			tcgetattr(serial_port, &oldtio); // save current port settings
 			memset (&newtio, 0, sizeof newtio);
 
-	 
-		  	newtio.c_cflag = B38400 | CS8 | CLOCAL | CWRITE;
+
+		  	newtio.c_cflag = B38400 | CS8 | CLOCAL/* | CWRITE*/;
 		  	newtio.c_iflag = IGNPAR;
 		  	newtio.c_oflag = 0;
 		  	newtio.c_lflag = 0;       //ICANON;
@@ -685,16 +685,16 @@ static void show_sequential(void)
 	glBindTexture(GL_TEXTURE_2D, LEFT_TEX);
 	draw_quad(-1, -1, 1, 1);
 
-	if(serial_port)
-		fputc((int)'r', serial_port);
+	if(serial_port > 0)
+		write(serial_port, "r", 1);
 
 	swap_buffers(dpy, drawable);
 
 	glBindTexture(GL_TEXTURE_2D, RIGHT_TEX);
 	draw_quad(-1, -1, 1, 1);
 
-	if(serial_port)
-		fputc((int)'l', serial_port);
+	if(serial_port > 0)
+		write(serial_port, "l", 1);
 
 }
 
