@@ -22,8 +22,22 @@ while [ $# -gt 0 ]; do
 			# stereowrap tries to enable vsync through OpenGL extensions if
 			# available, but just in case let's also set a few known env-vars.
 			export __GL_SYNC_TO_VBLANK=1	# <- for nvidia
+
+			# you can specify the serial device for the shutter glasses
+			if [ "$3" ]; then
+				export STEREOWRAP_SERIAL_DEVICE="$3"	# <- for nvidia
+			fi
 		fi
 		export STEREO_METHOD="$2"
+		shift;;
+
+	-p)
+		if [ -z "$2" ]; then
+			echo "-p must be followed by the name of a serial device" >&2
+			exit 1
+		fi
+
+		export STEREOWRAP_SERIAL_DEVICE="$2"
 		shift;;
 
 	-h)
@@ -32,8 +46,9 @@ while [ $# -gt 0 ]; do
 		echo ' -g  convert to greyscale before combining'
 		echo ' -f  use fixed-function pipeline, no shaders (will not work for some methods)'
 		echo ' -m  choose stereo presentation method'
+		echo ' -p  specify a serial device for the shutter glasses'
 		exit 0;;
-	
+
 	-*)
 		echo "unrecognized option: $1" >&2
 		exit 1;;
@@ -45,5 +60,5 @@ while [ $# -gt 0 ]; do
 	shift
 done
 
-echo "-- stereowrap($STEREO_METHOD): $*"
+echo "-- stereowrap($STEREO_METHOD)($STEREOWRAP_SERIAL_DEVICE): $*"
 LD_PRELOAD="libstereowrap.so $LD_PRELOAD" $*

@@ -186,7 +186,11 @@ static int init(void)
 		 */
 
 		// open the serial port for controlling the shutter glasses
-		serial_port = open("/dev/ttyUSB0", O_RDWR | O_NOCTTY /*| O_NONBLOCK*/); // todo : make the port configurable
+		if((env = getenv("STEREOWRAP_SERIAL_DEVICE")))
+			serial_port = open(env, O_RDWR | O_NOCTTY | O_NONBLOCK);
+		else
+ 			serial_port = open("/dev/ttyUSB0", O_RDWR | O_NOCTTY | O_NONBLOCK);
+
 		if(serial_port <= 0)
 			fprintf(stderr, "stereowrap: failed to open serial port\n");
 		else
@@ -695,7 +699,6 @@ static void show_sequential(void)
 
 	if(serial_port > 0)
 		write(serial_port, "l", 1);
-
 }
 
 static void sdr_combine(const char *sdrsrc)
