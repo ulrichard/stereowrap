@@ -1,7 +1,8 @@
-#include <avr/io.h>     
+#include <avr/io.h>
 #include <util/delay.h>
-#define ARDUINO_MAIN
-#include "pins_arduino.h"
+//#define ARDUINO_MAIN
+//#include "pins_arduino.h"
+#include <Arduino.h>
 #include </usr/share/arduino/libraries/SoftwareSerial/SoftwareSerial.h>
 
 const int leftEyeOutPin   =  3; // PB4
@@ -16,18 +17,18 @@ int main(void)
 
   DDRB = 0x18;  // In binary this is 0001 1000 (note that is bit 3 and 4)
   // AVR-GCC also would accept 0b00011000, by the way.
-	
-  mySerial.begin(38400);  
+
+  mySerial.begin(38400);
 
   // Set up a forever loop using your favorite C-style 'for' loop
   while(true)  // loop while 1 equals 1
   {
 
-	if(mySerial.available() > 0) 
+	if(mySerial.available() > 0)
     {
         // get incoming byte:
         inByte = mySerial.read();
-        
+
         if(inByte == 'l')
         {
             // Set Port B pins for 3 and 4 as HIGH (i.e. turn the LEDs on)
@@ -44,6 +45,5 @@ int main(void)
   return 1;
 }
 
-// http://stackoverflow.com/questions/920500/what-is-the-purpose-of-cxa-pure-virtual
-extern "C" void __cxa_pure_virtual() { while (1); }
+
 

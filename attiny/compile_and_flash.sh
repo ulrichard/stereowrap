@@ -2,10 +2,7 @@
 
 mkdir -p build
 cd build
-cmake -G "CodeBlocks - Unix Makefiles" -D CMAKE_TOOLCHAIN_FILE:PATH=avr_crosscompile.cmake ..
+cmake -G "CodeBlocks - Unix Makefiles" -D  ..
 make
-avrdude -P /dev/ttyACM0 -p t45 -c stk500v2 -Uflash:w:ShutterGlassesTiny.hex
-# for fuse settings see http://www.engbedded.com/fusecalc/
-avrdude -P /dev/ttyACM0 -p t45 -c stk500v2 -Ulfuse:w:0xe2:m
-avrdude -P /dev/ttyACM0 -p t45 -c stk500v2 -Uhfuse:w:0xdf:m
-avrdude -P /dev/ttyACM0 -p t45 -c stk500v2 -Uefuse:w:0xff:m
+make flash
+

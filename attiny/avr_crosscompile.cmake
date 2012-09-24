@@ -18,8 +18,11 @@ SET(CWARN "-Wall -Wstrict-prototypes")
 SET(CTUNING "-funsigned-char -funsigned-bitfields -fpack-struct -fshort-enums")
 SET(COPT "-Os")
 SET(CINCS "")
-SET(CMCU "-mmcu=attiny45")
+SET(CMCU "-mmcu=attiny85")
 SET(CDEFS "-D F_CPU=8000000")
+
+SET(AVRDUDE_DEVICE t85)
+SET(AVRDUDE_PORT   /dev/ttyACM0)
 
 SET(CFLAGS "${CMCU} ${CDEBUG} ${CDEFS} ${CINCS} ${COPT} ${CWARN} ${CSTANDARD} ${CEXTRA}")
 SET(CXXFLAGS "${CMCU} ${CDEFS} ${CINCS} ${COPT}")
