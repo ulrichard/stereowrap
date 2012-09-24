@@ -1,5 +1,7 @@
 #include <avr/io.h>     
 #include <util/delay.h>
+#define ARDUINO_MAIN
+#include "pins_arduino.h"
 #include </usr/share/arduino/libraries/SoftwareSerial/SoftwareSerial.h>
 
 const int leftEyeOutPin   =  3; // PB4
@@ -41,4 +43,7 @@ int main(void)
 
   return 1;
 }
+
+// http://stackoverflow.com/questions/920500/what-is-the-purpose-of-cxa-pure-virtual
+extern "C" void __cxa_pure_virtual() { while (1); }
 
