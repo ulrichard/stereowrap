@@ -1,7 +1,7 @@
 
 #include <SoftwareSerial.h>
 
-SoftwareSerial mySerial(5, 6);
+SoftwareSerial mySerial(5, 6); // receivePin, transmitPin
 
 const int leftEye   =  3;  
 int inByte = 0;
