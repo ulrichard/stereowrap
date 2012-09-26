@@ -1,9 +1,9 @@
 set(CMAKE_TOOLCHAIN_FILE avr_crosscompile.cmake)
 
-SET(CMCU "-mmcu=attiny85")
+SET(CMCU "-mmcu=attiny45")
 SET(CDEFS "-D F_CPU=8000000")
 
-SET(AVRDUDE_DEVICE t85)
+SET(AVRDUDE_DEVICE t45)
 SET(AVRDUDE_PORT   /dev/ttyACM0)
 
 CMAKE_MINIMUM_REQUIRED(VERSION 2.8)
@@ -15,20 +15,11 @@ IF(NOT CMAKE_CROSSCOMPILING)
 	ERROR()
 ENDIF()
 
-INCLUDE_DIRECTORIES(
-	${CMAKE_CURRENT_SOURCE_DIR}
-	/usr/share/arduino/hardware/arduino/cores/arduino
-#	/usr/share/arduino/hardware/arduino/variants/standard
-)
+INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR})
 
 ADD_EXECUTABLE(ShutterGlassesTiny.elf
-	ShutterGlasses.cpp
-	/usr/share/arduino/libraries/SoftwareSerial/SoftwareSerial.cpp
-	/usr/share/arduino/hardware/arduino/cores/arduino/Print.cpp
-	/usr/share/arduino/hardware/arduino/cores/arduino/WString.cpp
-	/usr/share/arduino/hardware/arduino/cores/arduino/wiring.c
-	/usr/share/arduino/hardware/arduino/cores/arduino/wiring_digital.c
-	/usr/share/arduino/hardware/arduino/cores/arduino/new.cpp
+	ShutterGlasses.c
+	uart.c
 )
 
 ADD_CUSTOM_COMMAND(TARGET ShutterGlassesTiny.elf POST_BUILD
