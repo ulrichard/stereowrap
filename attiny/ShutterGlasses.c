@@ -1,48 +1,49 @@
 #include <avr/io.h>
 #include <util/delay.h>
-//#define ARDUINO_MAIN
-//#include "pins_arduino.h"
-#include <Arduino.h>
-#include </usr/share/arduino/libraries/SoftwareSerial/SoftwareSerial.h>
+#include "uart.h"
 
-const int leftEyeOutPin   =  3; // PB4
-SoftwareSerial mySerial(5, 6);
-int inByte = 0;
+// ATMEL ATTINY45 / ATTINY85
+//
+//                  +-\/-+
+// Ain0 (D 5) PB5  1|    |8  Vcc
+// Ain3 (D 3) PB3  2|    |7  PB2 (D 2)  Ain1
+// Ain2 (D 4) PB4  3|    |6  PB1 (D 1) pwm1
+//            GND  4|    |5  PB0 (D 0) pwm0
+//                  +----+
+
+//                  +-\/-+
+//                 1|    |8  Vcc
+//                 2|    |7
+// output opamp <- 3|    |6
+//            GND  4|    |5  <- uart rx
+//                  +----+
+
 
 int main(void)
 {
-  // Set Port B pins for 3 and 4 as outputs
-  // PORTB bit 3 = physical pin #2 on the ATTINY45
-  // PORTB bit 4 = physical pin #3 on the ATTINY45
+    const uint8_t outOpAmp = PB4;
+    const uint8_t inUartRx = PB0;
 
-  DDRB = 0x18;  // In binary this is 0001 1000 (note that is bit 3 and 4)
-  // AVR-GCC also would accept 0b00011000, by the way.
+    DDRB = (1 << outOpAmp);
+    UART_INITIALIZE();
 
-  mySerial.begin(38400);
-
-  // Set up a forever loop using your favorite C-style 'for' loop
-  while(true)  // loop while 1 equals 1
-  {
-
-	if(mySerial.available() > 0)
+    // Set up a forever loop using your favorite C-style 'for' loop
+    while(1)  // loop while 1 equals 1
     {
-        // get incoming byte:
-        inByte = mySerial.read();
 
-        if(inByte == 'l')
+        if(UART_RX_AVAILABLE())
         {
-            // Set Port B pins for 3 and 4 as HIGH (i.e. turn the LEDs on)
-    		PORTB = 0x18;   // If we wanted only PB4 on, it'd be PORTB=0x10
-        }
-        if(inByte == 'r')
-        {
-            // Set PORTB to be all LOWs (i.e. turn the LEDs off)
-    		PORTB = 0x00;
+            // get incoming byte:
+            uint8_t inByte = UART_RX_READ();
+
+            if(inByte == 'l')
+                PORTB |= (1 << outOpAmp);
+            if(inByte == 'r')
+                PORTB ~= (1 << outOpAmp);
         }
     }
-  }
 
-  return 1;
+    return 1;
 }
 
 

@@ -23,7 +23,7 @@ void UART_INITIALIZE(){
 
 void UART_INITIALIZE_RX(){
 
-        PCMSK0 |= (1 << UART_RX_INTERRUPT);                        //Enable interrupts on RX PIN
+        PCMSK |= (1 << UART_RX_INTERRUPT);                        //Enable interrupts on RX PIN
 
         sei();
 
