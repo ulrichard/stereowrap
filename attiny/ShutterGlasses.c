@@ -2,15 +2,18 @@
 #include <util/delay.h>
 #include "uart.h"
 
+#undef UART_RX_PIN
+#undef UART_RX_INTERRUPT
+#undef UART_RX_INTERRUPT_PORT
+
 // ATMEL ATTINY45 / ATTINY85
 //
-//                  +-\/-+
-// Ain0 (D 5) PB5  1|    |8  Vcc
-// Ain3 (D 3) PB3  2|    |7  PB2 (D 2)  Ain1
-// Ain2 (D 4) PB4  3|    |6  PB1 (D 1) pwm1
-//            GND  4|    |5  PB0 (D 0) pwm0
-//                  +----+
-
+//                                    +-\/-+
+// PCINT5/!RESET/ADC0/dW        PB5  1|    |8  Vcc
+// PCINT3/XTAL1/CLKI/!OC1B/ADC3 PB3  2|    |7  PB2 SCK/USCK/ADC1/T0/INTO/PCINT2
+// PCINT4/XTAL2/CLKO/OC1B/ADC2  PB4  3|    |6  PB1 MISO/D0/OC0B/OC1A/PCINT1            pwm1
+//                              GND  4|    |5  PB0 MOSI/D1/SDA/AIN0/!OC0A/AREF/PCINT0  pwm0
+//                                    +----+
 //                  +-\/-+
 //                 1|    |8  Vcc
 //                 2|    |7
@@ -18,13 +21,16 @@
 //            GND  4|    |5  <- uart rx
 //                  +----+
 
+#define UART_RX_PIN            PB0
+#define UART_RX_INTERRUPT      PCINT0
+#define UART_RX_INTERRUPT_PORT PCIE
 
 int main(void)
 {
     const uint8_t outOpAmp = PB4;
     const uint8_t inUartRx = PB0;
 
-    DDRB = (1 << outOpAmp);
+    DDRB = (1 << outOpAmp); // declare output pins
     UART_INITIALIZE();
 
     // Set up a forever loop using your favorite C-style 'for' loop
@@ -39,7 +45,7 @@ int main(void)
             if(inByte == 'l')
                 PORTB |= (1 << outOpAmp);
             if(inByte == 'r')
-                PORTB ~= (1 << outOpAmp);
+                PORTB &= ~(1 << outOpAmp);
         }
     }
 
