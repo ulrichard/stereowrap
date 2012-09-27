@@ -1,13 +1,7 @@
+
 set(CMAKE_TOOLCHAIN_FILE avr_crosscompile.cmake)
 
-SET(CMCU "-mmcu=attiny45")
-SET(CDEFS "-D F_CPU=8000000")
-
-SET(AVRDUDE_DEVICE t45)
-SET(AVRDUDE_PORT   /dev/ttyACM0)
-
 CMAKE_MINIMUM_REQUIRED(VERSION 2.8)
-
 PROJECT(ShutterGlasses)
 
 INCLUDE(avr_crosscompile.cmake)

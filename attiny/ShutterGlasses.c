@@ -1,13 +1,13 @@
+
+#include "uart.h"
 #include <avr/io.h>
 #include <util/delay.h>
-#include "uart.h"
 
 #undef UART_RX_PIN
 #undef UART_RX_INTERRUPT
 #undef UART_RX_INTERRUPT_PORT
 
 // ATMEL ATTINY45 / ATTINY85
-//
 //                                    +-\/-+
 // PCINT5/!RESET/ADC0/dW        PB5  1|    |8  Vcc
 // PCINT3/XTAL1/CLKI/!OC1B/ADC3 PB3  2|    |7  PB2 SCK/USCK/ADC1/T0/INTO/PCINT2
@@ -21,36 +21,31 @@
 //            GND  4|    |5  <- uart rx
 //                  +----+
 
-#define UART_RX_PIN            PB0
-#define UART_RX_INTERRUPT      PCINT0
-#define UART_RX_INTERRUPT_PORT PCIE
+
 
 int main(void)
 {
-    const uint8_t outOpAmp = PB4;
-    const uint8_t inUartRx = PB0;
-
-    DDRB = (1 << outOpAmp); // declare output pins
+    DDRB = (1 << PIN_OUT_OPAMP) | (1 << PB4); // declare output pins
     UART_INITIALIZE();
 
     // Set up a forever loop using your favorite C-style 'for' loop
     while(1)  // loop while 1 equals 1
     {
-
+/*
         if(UART_RX_AVAILABLE())
         {
             // get incoming byte:
             uint8_t inByte = UART_RX_READ();
 
             if(inByte == 'l')
-                PORTB |= (1 << outOpAmp);
-            if(inByte == 'r')
-                PORTB &= ~(1 << outOpAmp);
+                PORTB |= (1 << PIN_OUT_OPAMP);
+            else //if(inByte == 'r')
+                PORTB &= ~(1 << PIN_OUT_OPAMP);
         }
+*/
     }
 
     return 1;
 }
-
 
 
