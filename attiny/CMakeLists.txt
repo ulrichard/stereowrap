@@ -36,3 +36,7 @@ ADD_CUSTOM_TARGET(flash
 	DEPENDS ShutterGlassesTiny.elf
 )
 
+ADD_CUSTOM_TARGET(simavr
+			run_avr -m ${AVR_DEVICE} -f ${AVR_FREQUENCY} ShutterGlassesTiny.hex
+	DEPENDS ShutterGlassesTiny.elf
+)

@@ -12,17 +12,19 @@ SET(CMAKE_STRIP /usr/bin/avr-strip)
 
 set(CMAKE_EXE_LINKER_FLAGS "-static")
 
+SET(AVR_DEVICE     attiny45)
+SET(AVR_FREQUENCY  8000000)
+SET(AVRDUDE_DEVICE t45)
+SET(AVRDUDE_PORT   /dev/ttyACM0)
+
 SET(CSTANDARD "-std=gnu99")
 SET(CDEBUG "-gstabs")
 SET(CWARN "-Wall -Wstrict-prototypes")
 SET(CTUNING "-funsigned-char -funsigned-bitfields -fpack-struct -fshort-enums")
 SET(COPT "-Os")
 SET(CINCS "")
-SET(CMCU "-mmcu=attiny45")
-SET(CDEFS "-D F_CPU=8000000")
-
-SET(AVRDUDE_DEVICE t45)
-SET(AVRDUDE_PORT   /dev/ttyACM0)
+SET(CMCU "-mmcu=${AVR_DEVICE}")
+SET(CDEFS "-D F_CPU=${AVR_FREQUENCY}")
 
 SET(CFLAGS "${CMCU} ${CDEBUG} ${CDEFS} ${CINCS} ${COPT} ${CWARN} ${CSTANDARD} ${CEXTRA}")
 SET(CXXFLAGS "${CMCU} ${CDEFS} ${CINCS} ${COPT}")
