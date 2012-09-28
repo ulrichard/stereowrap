@@ -13,7 +13,6 @@ INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR})
 
 ADD_EXECUTABLE(ShutterGlassesTiny.elf
 	ShutterGlasses.c
-	uart.c
 )
 
 ADD_CUSTOM_COMMAND(TARGET ShutterGlassesTiny.elf POST_BUILD
