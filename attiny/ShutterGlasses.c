@@ -12,8 +12,8 @@
 //                                    +----+
 //                  +-\/-+
 //                 1|    |8  Vcc
-// debug LED    <- 2|    |7
-// output opamp <- 3|    |6
+// crystal clock   2|    |7  -> debug LED
+// crystal clock   3|    |6  -> op amp 
 //            GND  4|    |5  <- uart rx
 //                  +----+
 
@@ -24,8 +24,8 @@
 #define UART_RX_INTERRUPT_PORT PCIE
 #define UART_RX_BUFFER_SIZE    32
 
-#define PIN_OUT_OPAMP          PB4
-#define PIN_OUT_DEBUG          PB3
+#define PIN_OUT_OPAMP          PB1
+#define PIN_OUT_DEBUG          PB2
 
 // uart timing
 #define UART_BAUD 38400

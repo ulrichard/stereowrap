@@ -20,12 +20,24 @@ ADD_CUSTOM_COMMAND(TARGET ShutterGlassesTiny.elf POST_BUILD
 	WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
 )
 
+OPTION(USE_CRYSTAL_CLOCK on)
+
 # for fuse settings see http://www.engbedded.com/fusecalc/
+IF(USE_CRYSTAL_CLOCK)
+        SET(LFUSE 0xce)
+        SET(HFUSE 0xdf)
+        SET(EFUSE 0xff)
+ELSE()
+        SET(LFUSE 0xe2)
+        SET(HFUSE 0xdf)
+        SET(EFUSE 0xff)
+ENDIF()
+
 ADD_CUSTOM_TARGET(flash
 			avrdude -P ${AVRDUDE_PORT} -p ${AVRDUDE_DEVICE} -c stk500v2 -Uflash:w:ShutterGlassesTiny.hex
-	COMMAND avrdude -P ${AVRDUDE_PORT} -p ${AVRDUDE_DEVICE} -c stk500v2 -Ulfuse:w:0xe2:m
-	COMMAND avrdude -P ${AVRDUDE_PORT} -p ${AVRDUDE_DEVICE} -c stk500v2 -Uhfuse:w:0xdf:m
-	COMMAND avrdude -P ${AVRDUDE_PORT} -p ${AVRDUDE_DEVICE} -c stk500v2 -Uefuse:w:0xff:m
+	COMMAND avrdude -P ${AVRDUDE_PORT} -p ${AVRDUDE_DEVICE} -c stk500v2 -Ulfuse:w:${LFUSE}:m
+	COMMAND avrdude -P ${AVRDUDE_PORT} -p ${AVRDUDE_DEVICE} -c stk500v2 -Uhfuse:w:${HFUSE}:m
+	COMMAND avrdude -P ${AVRDUDE_PORT} -p ${AVRDUDE_DEVICE} -c stk500v2 -Uefuse:w:${EFUSE}:m
 	DEPENDS ShutterGlassesTiny.elf
 )
 
