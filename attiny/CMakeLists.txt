@@ -20,7 +20,7 @@ ADD_CUSTOM_COMMAND(TARGET ShutterGlassesTiny.elf POST_BUILD
 	WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
 )
 
-OPTION(USE_CRYSTAL_CLOCK on)
+OPTION(USE_CRYSTAL_CLOCK "use a quartz to provide an exact clock rather than the internsl LC oscillator" ON)
 
 # for fuse settings see http://www.engbedded.com/fusecalc/
 IF(USE_CRYSTAL_CLOCK)

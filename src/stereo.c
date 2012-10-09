@@ -690,7 +690,10 @@ static void show_sequential(void)
 	draw_quad(-1, -1, 1, 1);
 
 	if(serial_port > 0)
+	{	
 		write(serial_port, "r", 1);
+		sync();
+	}
 
 	swap_buffers(dpy, drawable);
 
@@ -698,7 +701,10 @@ static void show_sequential(void)
 	draw_quad(-1, -1, 1, 1);
 
 	if(serial_port > 0)
+	{
 		write(serial_port, "l", 1);
+		sync();
+	}
 }
 
 static void sdr_combine(const char *sdrsrc)
